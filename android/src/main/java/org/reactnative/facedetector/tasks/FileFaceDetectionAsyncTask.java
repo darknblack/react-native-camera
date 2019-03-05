@@ -111,19 +111,18 @@ public class FileFaceDetectionAsyncTask extends AsyncTask<Void, Void, SparseArra
     for(int i = 0; i < faces.size(); i++) {
       Face face = faces.valueAt(i);
       WritableMap encodedFace = FaceDetectorUtils.serializeFace(face);
-      encodedFace.putDouble("yawAngle", (-encodedFace.getDouble("yawAngle") + 360) % 360);
-      encodedFace.putDouble("rollAngle", (-encodedFace.getDouble("rollAngle") + 360) % 360);
       facesArray.pushMap(encodedFace);
+      break;
     }
 
     result.putArray("faces", facesArray);
 
-    WritableMap image = Arguments.createMap();
-    image.putInt("width", mWidth);
-    image.putInt("height", mHeight);
-    image.putInt("orientation", mOrientation);
-    image.putString("uri", mUri);
-    result.putMap("image", image);
+    // WritableMap image = Arguments.createMap();
+    // image.putInt("width", mWidth);
+    // image.putInt("height", mHeight);
+    // image.putInt("orientation", mOrientation);
+    // image.putString("uri", mUri);
+    // result.putMap("image", image);
 
     mRNFaceDetector.release();
     mPromise.resolve(result);

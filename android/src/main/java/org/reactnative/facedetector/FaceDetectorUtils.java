@@ -24,13 +24,13 @@ public class FaceDetectorUtils {
   public static WritableMap serializeFace(Face face, double scaleX, double scaleY) {
     WritableMap encodedFace = Arguments.createMap();
 
-    encodedFace.putInt("faceID", face.getId());
-    encodedFace.putDouble("rollAngle", face.getEulerZ());
-    encodedFace.putDouble("yawAngle", face.getEulerY());
+    // encodedFace.putInt("faceID", face.getId());
+    // encodedFace.putDouble("rollAngle", face.getEulerZ());
+    // encodedFace.putDouble("yawAngle", face.getEulerY());
 
-    if (face.getIsSmilingProbability() >= 0) {
-      encodedFace.putDouble("smilingProbability", face.getIsSmilingProbability());
-    }
+    // if (face.getIsSmilingProbability() >= 0) {
+    //   encodedFace.putDouble("smilingProbability", face.getIsSmilingProbability());
+    // }
     if (face.getIsLeftEyeOpenProbability() >= 0) {
       encodedFace.putDouble("leftEyeOpenProbability", face.getIsLeftEyeOpenProbability());
     }
@@ -39,7 +39,8 @@ public class FaceDetectorUtils {
     }
 
     for(Landmark landmark : face.getLandmarks()) {
-      encodedFace.putMap(landmarkNames[landmark.getType()], mapFromPoint(landmark.getPosition(), scaleX, scaleY));
+      if(landmark.getType() == 4 && landmark.getType() == 10)
+        encodedFace.putMap(landmarkNames[landmark.getType()], mapFromPoint(landmark.getPosition(), scaleX, scaleY));
     }
 
     WritableMap origin = Arguments.createMap();
