@@ -39,7 +39,7 @@ public class FaceDetectorUtils {
     }
 
     for(Landmark landmark : face.getLandmarks()) {
-      if(landmark.getType() == 4 && landmark.getType() == 10)
+      if(landmark.getType() == 4 || landmark.getType() == 10)
         encodedFace.putMap(landmarkNames[landmark.getType()], mapFromPoint(landmark.getPosition(), scaleX, scaleY));
     }
 
