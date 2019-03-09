@@ -110,6 +110,9 @@ public class FileFaceDetectionAsyncTask extends AsyncTask<Void, Void, SparseArra
 
     for(int i = 0; i < faces.size(); i++) {
       Face face = faces.valueAt(i);
+      if(face.getIsLeftEyeOpenProbability() >= 0 && face.getIsRightEyeOpenProbability() >= 0) {
+        return;
+      }
       WritableMap encodedFace = FaceDetectorUtils.serializeFace(face);
       facesArray.pushMap(encodedFace);
       break;
@@ -130,7 +133,7 @@ public class FileFaceDetectionAsyncTask extends AsyncTask<Void, Void, SparseArra
 
   private static RNFaceDetector detectorForOptions(ReadableMap options, Context context) {
     RNFaceDetector detector = new RNFaceDetector(context);
-    detector.setTrackingEnabled(false);
+    detector.setTrackingEnabled(true);
 
     if(options.hasKey(MODE_OPTION_KEY)) {
       detector.setMode(options.getInt(MODE_OPTION_KEY));

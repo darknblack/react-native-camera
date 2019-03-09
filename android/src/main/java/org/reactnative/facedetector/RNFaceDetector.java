@@ -22,12 +22,13 @@ public class RNFaceDetector {
 
   private int mClassificationType = NO_CLASSIFICATIONS;
   private int mLandmarkType = NO_LANDMARKS;
-  private float mMinFaceSize = 0.15f;
+  private float mMinFaceSize = 0.25f; // from 0.15
   private int mMode = FAST_MODE;
 
   public RNFaceDetector(Context context) {
     mBuilder = new FaceDetector.Builder(context);
     mBuilder.setMinFaceSize(mMinFaceSize);
+    mBuilder.setProminentFaceOnly(true); // ADDED
     mBuilder.setMode(mMode);
     mBuilder.setLandmarkType(mLandmarkType);
     mBuilder.setClassificationType(mClassificationType);
