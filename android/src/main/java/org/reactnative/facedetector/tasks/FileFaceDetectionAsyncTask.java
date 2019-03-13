@@ -109,6 +109,7 @@ public class FileFaceDetectionAsyncTask extends AsyncTask<Void, Void, SparseArra
     WritableArray facesArray = Arguments.createArray();
 
     for(int i = 0; i < faces.size(); i++) {
+      Face face = faces.valueAt(i);
       WritableMap encodedFace = FaceDetectorUtils.serializeFace(face);
       facesArray.pushMap(encodedFace);
       break;

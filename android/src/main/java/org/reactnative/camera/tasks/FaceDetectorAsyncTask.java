@@ -48,7 +48,7 @@ public class FaceDetectorAsyncTask extends android.os.AsyncTask<Void, Void, Spar
       mDelegate.onFaceDetectionError(mFaceDetector);
     } else {
       if (faces.size() > 0) {
-        Face face = faces.valueAt(i);
+        Face face = faces.valueAt(0);
         if(face.getIsLeftEyeOpenProbability() < 0 && face.getIsRightEyeOpenProbability() < 0) {
           // return; DO NOTHING
         } else {
