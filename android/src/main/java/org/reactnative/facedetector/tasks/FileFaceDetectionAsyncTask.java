@@ -110,7 +110,8 @@ public class FileFaceDetectionAsyncTask extends AsyncTask<Void, Void, SparseArra
 
     for(int i = 0; i < faces.size(); i++) {
       Face face = faces.valueAt(i);
-      if(face.getIsLeftEyeOpenProbability() >= 0 && face.getIsRightEyeOpenProbability() >= 0) {
+      if(face.getIsLeftEyeOpenProbability() < 0 && face.getIsRightEyeOpenProbability() < 0) {
+        mRNFaceDetector.release();
         return;
       }
       WritableMap encodedFace = FaceDetectorUtils.serializeFace(face);
