@@ -25,8 +25,8 @@ public class FaceDetectorUtils {
     WritableMap encodedFace = Arguments.createMap();
 
     // encodedFace.putInt("faceID", face.getId());
-    // encodedFace.putDouble("rollAngle", face.getEulerZ());
-    // encodedFace.putDouble("yawAngle", face.getEulerY());
+    encodedFace.putDouble("rollAngle", face.getEulerZ());
+    encodedFace.putDouble("yawAngle", face.getEulerY());
 
     // if (face.getIsSmilingProbability() >= 0) {
     //   encodedFace.putDouble("smilingProbability", face.getIsSmilingProbability());

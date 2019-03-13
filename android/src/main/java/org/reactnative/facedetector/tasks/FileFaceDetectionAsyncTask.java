@@ -133,7 +133,7 @@ public class FileFaceDetectionAsyncTask extends AsyncTask<Void, Void, SparseArra
 
   private static RNFaceDetector detectorForOptions(ReadableMap options, Context context) {
     RNFaceDetector detector = new RNFaceDetector(context);
-    detector.setTrackingEnabled(true);
+    // detector.setTrackingEnabled(true);
 
     if(options.hasKey(MODE_OPTION_KEY)) {
       detector.setMode(options.getInt(MODE_OPTION_KEY));
