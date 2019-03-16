@@ -47,22 +47,6 @@ type TrackedFaceFeature = FaceFeature & {
   faceID?: number,
 };
 
-type TrackedTextFeature = {
-  type: string,
-  bounds: {
-    size: {
-      width: number,
-      height: number,
-    },
-    origin: {
-      x: number,
-      y: number,
-    },
-  },
-  value: string,
-  components: Array<TrackedTextFeature>,
-};
-
 type RecordingOptions = {
   maxDuration?: number,
   maxFileSize?: number,
@@ -92,7 +76,6 @@ type PropsType = typeof View.props & {
   autoFocusPointOfInterest?: { x: number, y: number },
   faceDetectionClassifications?: number,
   onFacesDetected?: ({ faces: Array<TrackedFaceFeature> }) => void,
-  onTextRecognized?: ({ textBlocks: Array<TrackedTextFeature> }) => void,
   captureAudio?: boolean,
   useCamera2Api?: boolean,
   playSoundOnCapture?: boolean,
@@ -174,7 +157,6 @@ export default class Camera extends React.Component<PropsType, StateType> {
     onCameraReady: PropTypes.func,
     onPictureSaved: PropTypes.func,
     onFacesDetected: PropTypes.func,
-    onTextRecognized: PropTypes.func,
     faceDetectionMode: PropTypes.number,
     faceDetectionLandmarks: PropTypes.number,
     faceDetectionClassifications: PropTypes.number,
@@ -385,7 +367,6 @@ export default class Camera extends React.Component<PropsType, StateType> {
           onMountError={this._onMountError}
           onCameraReady={this._onCameraReady}
           onFacesDetected={this._onObjectDetected(this.props.onFacesDetected)}
-          onTextRecognized={this._onObjectDetected(this.props.onTextRecognized)}
           onPictureSaved={this._onPictureSaved}
         >
           {this.renderChildren()}
@@ -403,10 +384,6 @@ export default class Camera extends React.Component<PropsType, StateType> {
 
     if (props.onFacesDetected) {
       newProps.faceDetectorEnabled = true;
-    }
-
-    if (props.onTextRecognized) {
-      newProps.textRecognizerEnabled = true;
     }
 
     if (Platform.OS === 'ios') {
@@ -433,7 +410,6 @@ const RNCamera = requireNativeComponent('RNCamera', Camera, {
     accessibilityLabel: true,
     accessibilityLiveRegion: true,
     faceDetectorEnabled: true,
-    textRecognizerEnabled: true,
     importantForAccessibility: true,
     onCameraReady: true,
     onPictureSaved: true,

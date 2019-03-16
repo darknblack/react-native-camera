@@ -15,8 +15,6 @@ import com.facebook.react.bridge.*;
 import com.facebook.react.uimanager.ThemedReactContext;
 import com.google.android.cameraview.CameraView;
 import com.google.android.gms.vision.face.Face;
-import com.google.android.gms.vision.text.TextBlock;
-import com.google.android.gms.vision.text.TextRecognizer;
 import com.google.zxing.DecodeHintType;
 import com.google.zxing.MultiFormatReader;
 import com.google.zxing.Result;
@@ -31,8 +29,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class RNCameraView extends CameraView implements LifecycleEventListener, FaceDetectorAsyncTaskDelegate,
-    TextRecognizerAsyncTaskDelegate, PictureSavedDelegate {
+public class RNCameraView extends CameraView implements LifecycleEventListener, FaceDetectorAsyncTaskDelegate, PictureSavedDelegate {
   private ThemedReactContext mThemedReactContext;
   private Queue<Promise> mPictureTakenPromises = new ConcurrentLinkedQueue<>();
   private Map<Promise, ReadableMap> mPictureTakenOptions = new ConcurrentHashMap<>();
@@ -45,14 +42,11 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
 
   // Concurrency lock for scanners to avoid flooding the runtime
   public volatile boolean faceDetectorTaskLock = false;
-  public volatile boolean textRecognizerTaskLock = false;
 
   // Scanning-related properties
   private MultiFormatReader mMultiFormatReader;
   private RNFaceDetector mFaceDetector;
-  private TextRecognizer mTextRecognizer;
   private boolean mShouldDetectFaces = false;
-  private boolean mShouldRecognizeText = false;
   private int mFaceDetectorMode = RNFaceDetector.FAST_MODE;
   private int mFaceDetectionLandmarks = RNFaceDetector.NO_LANDMARKS;
   private int mFaceDetectionClassifications = RNFaceDetector.NO_CLASSIFICATIONS;
@@ -109,8 +103,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
       public void onFramePreview(CameraView cameraView, byte[] data, int width, int height, int rotation) {
         int correctRotation = RNCameraViewHelper.getCorrectCameraRotation(rotation, getFacing());
         boolean willCallFaceTask = mShouldDetectFaces && !faceDetectorTaskLock && cameraView instanceof FaceDetectorAsyncTaskDelegate;
-        boolean willCallTextTask = mShouldRecognizeText && !textRecognizerTaskLock && cameraView instanceof TextRecognizerAsyncTaskDelegate;
-        if (!willCallFaceTask && !willCallTextTask) {
+        if (!willCallFaceTask) {
           return;
         }
 
@@ -122,12 +115,6 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
           faceDetectorTaskLock = true;
           FaceDetectorAsyncTaskDelegate delegate = (FaceDetectorAsyncTaskDelegate) cameraView;
           new FaceDetectorAsyncTask(delegate, mFaceDetector, data, width, height, correctRotation).execute();
-        }
-
-        if (willCallTextTask) {
-          textRecognizerTaskLock = true;
-          TextRecognizerAsyncTaskDelegate delegate = (TextRecognizerAsyncTaskDelegate) cameraView;
-          new TextRecognizerAsyncTask(delegate, mTextRecognizer, data, width, height, correctRotation).execute();
         }
       }
     });
@@ -271,7 +258,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
       setupFaceDetector();
     }
     this.mShouldDetectFaces = shouldDetectFaces;
-    setScanning(mShouldDetectFaces || mShouldRecognizeText);
+    setScanning(mShouldDetectFaces);
   }
 
   public void onFacesDetected(SparseArray<Face> facesReported, int sourceWidth, int sourceHeight, int sourceRotation) {
@@ -296,38 +283,6 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   @Override
   public void onFaceDetectingTaskCompleted() {
     faceDetectorTaskLock = false;
-  }
-
-  /**
-   * Initial setup of the text recongizer
-   */
-  private void setupTextRecongnizer() {
-    mTextRecognizer = new TextRecognizer.Builder(mThemedReactContext).build();
-  }
-
-  public void setShouldRecognizeText(boolean shouldRecognizeText) {
-    if (shouldRecognizeText && mTextRecognizer == null) {
-      setupTextRecongnizer();
-    }
-    this.mShouldRecognizeText = shouldRecognizeText;
-    setScanning(mShouldDetectFaces || mShouldRecognizeText);
-  }
-
-  @Override
-  public void onTextRecognized(SparseArray<TextBlock> textBlocks, int sourceWidth, int sourceHeight, int sourceRotation) {
-    if (!mShouldRecognizeText) {
-      return;
-    }
-
-    SparseArray<TextBlock> textBlocksDetected = textBlocks == null ? new SparseArray<TextBlock>() : textBlocks;
-    ImageDimensions dimensions = new ImageDimensions(sourceWidth, sourceHeight, sourceRotation, getFacing());
-
-    RNCameraViewHelper.emitTextRecognizedEvent(this, textBlocksDetected, dimensions);
-  }
-
-  @Override
-  public void onTextRecognizerTaskCompleted() {
-    textRecognizerTaskLock = false;
   }
 
   @Override
@@ -355,9 +310,6 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   public void onHostDestroy() {
     if (mFaceDetector != null) {
       mFaceDetector.release();
-    }
-    if (mTextRecognizer != null) {
-      mTextRecognizer.release();
     }
     mMultiFormatReader = null;
     stop();
