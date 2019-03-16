@@ -7,8 +7,6 @@ import com.facebook.react.uimanager.NativeViewHierarchyManager;
 import com.facebook.react.uimanager.UIBlock;
 import com.facebook.react.uimanager.UIManagerModule;
 import com.google.android.cameraview.AspectRatio;
-import com.google.zxing.BarcodeFormat;
-import org.reactnative.barcodedetector.BarcodeFormatUtils;
 import org.reactnative.camera.tasks.ResolveTakenPictureAsyncTask;
 import org.reactnative.camera.utils.ScopedContext;
 import org.reactnative.facedetector.RNFaceDetector;
@@ -32,29 +30,6 @@ public class CameraModule extends ReactContextBaseJavaModule {
   static final int VIDEO_720P = 2;
   static final int VIDEO_480P = 3;
   static final int VIDEO_4x3 = 4;
-
-  public static final Map<String, Object> VALID_BARCODE_TYPES =
-      Collections.unmodifiableMap(new HashMap<String, Object>() {
-        {
-          put("aztec", BarcodeFormat.AZTEC.toString());
-          put("ean13", BarcodeFormat.EAN_13.toString());
-          put("ean8", BarcodeFormat.EAN_8.toString());
-          put("qr", BarcodeFormat.QR_CODE.toString());
-          put("pdf417", BarcodeFormat.PDF_417.toString());
-          put("upc_e", BarcodeFormat.UPC_E.toString());
-          put("datamatrix", BarcodeFormat.DATA_MATRIX.toString());
-          put("code39", BarcodeFormat.CODE_39.toString());
-          put("code93", BarcodeFormat.CODE_93.toString());
-          put("interleaved2of5", BarcodeFormat.ITF.toString());
-          put("codabar", BarcodeFormat.CODABAR.toString());
-          put("code128", BarcodeFormat.CODE_128.toString());
-          put("maxicode", BarcodeFormat.MAXICODE.toString());
-          put("rss14", BarcodeFormat.RSS_14.toString());
-          put("rssexpanded", BarcodeFormat.RSS_EXPANDED.toString());
-          put("upc_a", BarcodeFormat.UPC_A.toString());
-          put("upc_ean", BarcodeFormat.UPC_EAN_EXTENSION.toString());
-        }
-      });
 
   public CameraModule(ReactApplicationContext reactContext) {
     super(reactContext);
@@ -80,7 +55,6 @@ public class CameraModule extends ReactContextBaseJavaModule {
         put("AutoFocus", getAutoFocusConstants());
         put("WhiteBalance", getWhiteBalanceConstants());
         put("VideoQuality", getVideoQualityConstants());
-        put("BarCodeType", getBarCodeConstants());
         put("FaceDetection", Collections.unmodifiableMap(new HashMap<String, Object>() {
           {
             put("Mode", getFaceDetectionModeConstants());
@@ -113,11 +87,6 @@ public class CameraModule extends ReactContextBaseJavaModule {
                 put("none", RNFaceDetector.NO_LANDMARKS);
               }
             });
-          }
-        }));
-        put("GoogleVisionBarcodeDetection", Collections.unmodifiableMap(new HashMap<String, Object>() {
-          {
-            put("BarcodeType", BarcodeFormatUtils.REVERSE_FORMATS);
           }
         }));
       }
@@ -176,12 +145,9 @@ public class CameraModule extends ReactContextBaseJavaModule {
         });
       }
 
-      private Map<String, Object> getBarCodeConstants() {
-        return VALID_BARCODE_TYPES;
-      }
     });
   }
-    
+
     @ReactMethod
     public void pausePreview(final int viewTag) {
         final ReactApplicationContext context = getReactApplicationContext();
@@ -190,7 +156,7 @@ public class CameraModule extends ReactContextBaseJavaModule {
             @Override
             public void execute(NativeViewHierarchyManager nativeViewHierarchyManager) {
                 final RNCameraView cameraView;
-                
+
                 try {
                     cameraView = (RNCameraView) nativeViewHierarchyManager.resolveView(viewTag);
                     if (cameraView.isCameraOpened()) {
@@ -202,7 +168,7 @@ public class CameraModule extends ReactContextBaseJavaModule {
             }
         });
     }
-    
+
     @ReactMethod
     public void resumePreview(final int viewTag) {
         final ReactApplicationContext context = getReactApplicationContext();
@@ -211,7 +177,7 @@ public class CameraModule extends ReactContextBaseJavaModule {
             @Override
             public void execute(NativeViewHierarchyManager nativeViewHierarchyManager) {
                 final RNCameraView cameraView;
-                
+
                 try {
                     cameraView = (RNCameraView) nativeViewHierarchyManager.resolveView(viewTag);
                     if (cameraView.isCameraOpened()) {
@@ -326,7 +292,7 @@ public class CameraModule extends ReactContextBaseJavaModule {
             @Override
             public void execute(NativeViewHierarchyManager nativeViewHierarchyManager) {
                 final RNCameraView cameraView;
-                
+
                 try {
                     cameraView = (RNCameraView) nativeViewHierarchyManager.resolveView(viewTag);
                     WritableArray result = Arguments.createArray();

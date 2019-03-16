@@ -73,20 +73,12 @@ function convertNativeProps(props) {
     newProps.captureTarget = Camera.constants.CaptureTarget[props.captureTarget];
   }
 
-  // do not register barCodeTypes if no barcode listener
-  if (typeof props.onBarCodeRead !== 'function') {
-    newProps.barCodeTypes = [];
-  }
-
-  newProps.barcodeScannerEnabled = typeof props.onBarCodeRead === 'function';
-
   return newProps;
 }
 
 export default class Camera extends Component {
   static constants = {
     Aspect: CameraManager.Aspect,
-    BarCodeType: CameraManager.BarCodeType,
     Type: CameraManager.Type,
     CaptureMode: CameraManager.CaptureMode,
     CaptureTarget: CameraManager.CaptureTarget,
@@ -108,8 +100,6 @@ export default class Camera extends Component {
     flashMode: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     zoom: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     keepAwake: PropTypes.bool,
-    onBarCodeRead: PropTypes.func,
-    barcodeScannerEnabled: PropTypes.bool,
     cropToPreview: PropTypes.bool,
     clearWindowBackground: PropTypes.bool,
     onFocusChanged: PropTypes.func,
@@ -117,7 +107,6 @@ export default class Camera extends Component {
     mirrorImage: PropTypes.bool,
     mirrorVideo: PropTypes.bool,
     fixOrientation: PropTypes.bool,
-    barCodeTypes: PropTypes.array,
     orientation: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     playSoundOnCapture: PropTypes.bool,
     torchMode: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
@@ -146,7 +135,6 @@ export default class Camera extends Component {
     mirrorVideo: false,
     cropToPreview: false,
     clearWindowBackground: false,
-    barCodeTypes: Object.values(CameraManager.BarCodeType),
     permissionDialogTitle: '',
     permissionDialogMessage: '',
     notAuthorizedView: (
@@ -183,7 +171,6 @@ export default class Camera extends Component {
 
   // eslint-disable-next-line
   async componentWillMount() {
-    this._addOnBarCodeReadListener();
     this._addOnFocusChanged();
     this._addOnZoomChanged();
 
@@ -201,7 +188,6 @@ export default class Camera extends Component {
   }
 
   componentWillUnmount() {
-    this._removeOnBarCodeReadListener();
     this._removeOnFocusChanged();
     this._removeOnZoomChanged();
     if (this.state.isRecording) {
@@ -211,10 +197,7 @@ export default class Camera extends Component {
 
   // eslint-disable-next-line
   componentWillReceiveProps(newProps) {
-    const { onBarCodeRead, onFocusChanged, onZoomChanged } = this.props;
-    if (onBarCodeRead !== newProps.onBarCodeRead) {
-      this._addOnBarCodeReadListener(newProps);
-    }
+    const { onFocusChanged, onZoomChanged } = this.props;
     if (onFocusChanged !== !newProps.onFocusChanged) {
       this._addOnFocusChanged(newProps);
     }
@@ -223,16 +206,6 @@ export default class Camera extends Component {
     }
   }
 
-  _addOnBarCodeReadListener(props) {
-    const { onBarCodeRead } = props || this.props;
-    this._removeOnBarCodeReadListener();
-    if (onBarCodeRead) {
-      this.cameraBarCodeReadListener = Platform.select({
-        ios: NativeAppEventEmitter.addListener('CameraBarCodeRead', this._onBarCodeRead),
-        android: DeviceEventEmitter.addListener('CameraBarCodeReadAndroid', this._onBarCodeRead),
-      });
-    }
-  }
   _addOnFocusChanged(props) {
     if (Platform.OS === 'ios') {
       const { onFocusChanged } = props || this.props;
@@ -246,12 +219,7 @@ export default class Camera extends Component {
       this.zoomListener = NativeAppEventEmitter.addListener('zoomChanged', onZoomChanged);
     }
   }
-  _removeOnBarCodeReadListener() {
-    const listener = this.cameraBarCodeReadListener;
-    if (listener) {
-      listener.remove();
-    }
-  }
+
   _removeOnFocusChanged() {
     const listener = this.focusListener;
     if (listener) {
@@ -290,17 +258,10 @@ export default class Camera extends Component {
     }
   }
 
-  _onBarCodeRead = data => {
-    if (this.props.onBarCodeRead) {
-      this.props.onBarCodeRead(data);
-    }
-  };
-
   capture(options) {
     const props = convertNativeProps(this.props);
     options = {
       audio: props.captureAudio,
-      barCodeTypes: props.barCodeTypes,
       mode: props.captureMode,
       playSoundOnCapture: props.playSoundOnCapture,
       target: props.captureTarget,
