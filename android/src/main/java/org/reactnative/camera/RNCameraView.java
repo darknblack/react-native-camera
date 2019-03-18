@@ -15,6 +15,7 @@ import com.facebook.react.bridge.*;
 import com.facebook.react.uimanager.ThemedReactContext;
 import com.google.android.cameraview.CameraView;
 import com.google.android.gms.vision.face.Face;
+import com.google.android.gms.vision.face.Landmark;
 import com.google.zxing.DecodeHintType;
 import com.google.zxing.Result;
 import org.reactnative.camera.tasks.*;
@@ -35,14 +36,14 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Color;
 import java.util.Random;
-import org.reactnative.frame.RNFrame;
-import org.reactnative.frame.RNFrameFactory;
-import org.reactnative.facedetector.FaceDetectorUtils;
-import android.util.Log;
-import com.google.android.gms.vision.face.Landmark;
 import android.app.Activity;
 import android.os.Handler;
+import android.util.Log;
 
+// MEDIAPLAYER
+import android.media.MediaPlayer;
+import android.media.AudioManager;
+import android.content.res.AssetFileDescriptor;
 
 public class RNCameraView extends CameraView implements LifecycleEventListener, FaceDetectorAsyncTaskDelegate, PictureSavedDelegate {
   private ThemedReactContext mThemedReactContext;
@@ -72,22 +73,38 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   private ExecutorService executorService;
   private static final float FACE_POSITION_RADIUS = 5f;
 
-  private String mEyeToDetect = "left eye"; // both eyes | left eye | right eye
-  private int mCounter = 0;
-  private float mEyeOpenProbability = .9f;
   private boolean mEyesOpen = true;
   private boolean mShouldCount = true;
+  private int mCounter = 0;
+  private float mEyeOpenProbability = .9f;
   private float mUserSetEyesOpenProbability = .3f;
+  float scaleX = 1f;
+  float scaleY = 1f;
+  private String mEyeToDetect = "both eyes";
+  private MediaPlayer mMediaPlayer;
 
 
   public RNCameraView(ThemedReactContext themedReactContext) {
     super(themedReactContext, true);
-    executorService = Executors.newFixedThreadPool(1);
     mThemedReactContext = themedReactContext;
     themedReactContext.addLifecycleEventListener(this);
 
     mFacePositionPaint = new Paint();
     mFacePositionPaint.setColor(Color.RED);
+    executorService = Executors.newFixedThreadPool(1);
+    mMediaPlayer = new MediaPlayer();
+
+    try {
+      int res = mThemedReactContext.getResources().getIdentifier("alarm_1", "raw", mThemedReactContext.getPackageName());
+      AssetFileDescriptor afd = mThemedReactContext.getResources().openRawResourceFd(res);
+      mMediaPlayer.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+
+      mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+      mMediaPlayer.prepareAsync();
+
+    } catch (Exception e) {
+      Log.d("RNSoundModule", "Exception", e);
+    }
 
 
     addCallback(new Callback() {
@@ -160,6 +177,9 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
     dimensions = new ImageDimensions(sourceWidth, sourceHeight, sourceRotation, getFacing());
     mFace = face;
 
+    scaleX = (float) getWidth() / (dimensions.getWidth());
+    scaleY = (float) getHeight() / (dimensions.getHeight());
+
     if(mEyeToDetect.equals("left eye"))
       mEyeOpenProbability = mFace.getIsLeftEyeOpenProbability();
     else if(mEyeToDetect.equals("right eye"))
@@ -170,7 +190,12 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
           ? mFace.getIsLeftEyeOpenProbability()
           : mFace.getIsRightEyeOpenProbability();
 
-    boolean eyesClosed = mEyeOpenProbability <= mUserSetEyesOpenProbability;
+    boolean eyesClosed;
+
+    if(mEyeOpenProbability != -1.0f)
+      eyesClosed = mEyeOpenProbability <= mUserSetEyesOpenProbability;
+    else
+      eyesClosed = false;
 
     if(eyesClosed)
       readyForAlarm();
@@ -183,6 +208,10 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
 
   public void stopAlarm() {
     mEyesOpen = true;
+    if(mMediaPlayer.isPlaying()) {
+      mMediaPlayer.pause();
+      mMediaPlayer.seekTo(0);
+    }
   }
 
   public void readyForAlarm() {
@@ -191,14 +220,19 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
         try {
           if(mEyesOpen == false) {
             if(mShouldCount) {
-              mCounter++;
               mShouldCount = false;
+              if(mMediaPlayer.isPlaying()) {
+                mCounter++;
+              }
             }
           } else {
             mEyesOpen = false;
             mShouldCount = true;
+            Thread.sleep(500); // WAIT FOR A SECOND
+            mMediaPlayer.setLooping(true);
+            mMediaPlayer.seekTo(200);
+            mMediaPlayer.start();
           }
-          Thread.sleep(900); // WAIT FOR A SECOND
         } catch (InterruptedException e) {
           throw new IllegalStateException(e);
         }
@@ -208,22 +242,21 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
 
   public float translateX(float x) {
     if (dimensions.getFacing() == CameraView.FACING_FRONT) {
-      return dimensions.getWidth() - x;
+      return dimensions.getWidth() - (x * scaleX) ;
     } else {
-      return x;
+      return x * scaleX;
     }
   }
 
   public float translateY(float y) {
-    return y;
+    return y * scaleY;
   }
 
   @Override
   public void draw(Canvas canvas) {
     super.draw(canvas);
 
-    if (mFace == null)
-      return;
+    if (mFace == null) return;
 
     for(Landmark landmark : mFace.getLandmarks()) {
       float x = translateX(landmark.getPosition().x);
@@ -233,15 +266,15 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
 
       if(mEyeToDetect.equals("left eye")) {
         if(landmarkType == 4)
-          canvas.drawCircle(x, y, FACE_POSITION_RADIUS, mFacePositionPaint);
+          canvas.drawCircle(x, y, FACE_POSITION_RADIUS * scaleY, mFacePositionPaint);
       }
       else if(mEyeToDetect.equals("right eye")) {
         if(landmarkType == 10)
-          canvas.drawCircle(x, y, FACE_POSITION_RADIUS, mFacePositionPaint);
+          canvas.drawCircle(x, y, FACE_POSITION_RADIUS * scaleY, mFacePositionPaint);
       }
       else {
         if(landmarkType == 4 || landmarkType == 10)
-          canvas.drawCircle(x, y, FACE_POSITION_RADIUS, mFacePositionPaint);
+          canvas.drawCircle(x, y, FACE_POSITION_RADIUS * scaleY, mFacePositionPaint);
       }
     }
 
@@ -421,6 +454,8 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   @Override
   public void onFaceDetectingTaskCompleted() {
     faceDetectorTaskLock = false;
+    if(mEyeOpenProbability == -1.0f)
+      stopAlarm();
   }
 
   @Override
