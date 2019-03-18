@@ -62,6 +62,7 @@ type EventCallbackArgumentsType = {
 };
 
 type PropsType = typeof View.props & {
+  eyeToDeTect?: string,
   zoom?: number,
   ratio?: string,
   focusDepth?: number,
@@ -150,6 +151,7 @@ export default class Camera extends React.Component<PropsType, StateType> {
 
   static propTypes = {
     ...ViewPropTypes,
+    eyeToDeTect: PropTypes.string,
     zoom: PropTypes.number,
     ratio: PropTypes.string,
     focusDepth: PropTypes.number,
@@ -177,7 +179,9 @@ export default class Camera extends React.Component<PropsType, StateType> {
     mirrorVideo: PropTypes.bool,
   };
 
+  // DEFAULT PROPS
   static defaultProps: Object = {
+    eyeToDeTect: "both eyes", // both eyes | left eye | right eye
     zoom: 0,
     ratio: '4:3',
     focusDepth: 0,

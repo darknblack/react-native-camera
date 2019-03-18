@@ -187,37 +187,6 @@ public class RNCameraViewHelper {
     ReactContext reactContext = (ReactContext) view.getContext();
     reactContext.getNativeModule(UIManagerModule.class).getEventDispatcher().dispatchEvent(event);
   }
-
-  // Face detection events
-
-  public static void emitFacesDetectedEvent(
-      ViewGroup view,
-      SparseArray<Face> faces,
-      ImageDimensions dimensions
-  ) {
-    float density = view.getResources().getDisplayMetrics().density;
-
-    double scaleX = (double) view.getWidth() / (dimensions.getWidth() * density);
-    double scaleY = (double) view.getHeight() / (dimensions.getHeight() * density);
-
-    FacesDetectedEvent event = FacesDetectedEvent.obtain(
-        view.getId(),
-        faces,
-        dimensions,
-        scaleX,
-        scaleY
-    );
-
-    ReactContext reactContext = (ReactContext) view.getContext();
-    reactContext.getNativeModule(UIManagerModule.class).getEventDispatcher().dispatchEvent(event);
-  }
-
-  public static void emitFaceDetectionErrorEvent(ViewGroup view, RNFaceDetector faceDetector) {
-    FaceDetectionErrorEvent event = FaceDetectionErrorEvent.obtain(view.getId(), faceDetector);
-    ReactContext reactContext = (ReactContext) view.getContext();
-    reactContext.getNativeModule(UIManagerModule.class).getEventDispatcher().dispatchEvent(event);
-  }
-
   // Utilities
 
   public static int getCorrectCameraRotation(int rotation, int facing) {
@@ -286,6 +255,36 @@ public class RNCameraViewHelper {
     }
 
     return exifMap;
+  }
+
+  // Face detection events
+
+  public static void emitFacesDetectedEvent(
+      ViewGroup view,
+      SparseArray<Face> faces,
+      ImageDimensions dimensions
+  ) {
+    float density = view.getResources().getDisplayMetrics().density;
+
+    double scaleX = (double) view.getWidth() / (dimensions.getWidth() * density);
+    double scaleY = (double) view.getHeight() / (dimensions.getHeight() * density);
+
+    FacesDetectedEvent event = FacesDetectedEvent.obtain(
+        view.getId(),
+        faces,
+        dimensions,
+        scaleX,
+        scaleY
+    );
+
+    ReactContext reactContext = (ReactContext) view.getContext();
+    reactContext.getNativeModule(UIManagerModule.class).getEventDispatcher().dispatchEvent(event);
+  }
+
+  public static void emitFaceDetectionErrorEvent(ViewGroup view, RNFaceDetector faceDetector) {
+    FaceDetectionErrorEvent event = FaceDetectionErrorEvent.obtain(view.getId(), faceDetector);
+    ReactContext reactContext = (ReactContext) view.getContext();
+    reactContext.getNativeModule(UIManagerModule.class).getEventDispatcher().dispatchEvent(event);
   }
 
   public static Bitmap generateSimulatorPhoto(int width, int height) {

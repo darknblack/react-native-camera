@@ -113,6 +113,11 @@ public class CameraViewManager extends ViewGroupManager<RNCameraView> {
     view.setPlaySoundOnCapture(playSoundOnCapture);
   }
 
+  @ReactProp(name = "eyeToDeTect")
+  public void setEyeToDetect(RNCameraView view, String eyeToDeTect) {
+    view.setEyeToDetect(eyeToDeTect);
+  }
+
   @ReactProp(name = "faceDetectorEnabled")
   public void setFaceDetecting(RNCameraView view, boolean faceDetectorEnabled) {
     view.setShouldDetectFaces(faceDetectorEnabled);
