@@ -13,6 +13,7 @@ public class FaceDetectorAsyncTask extends android.os.AsyncTask<Void, Void, Spar
   private int mRotation;
   private RNFaceDetector mFaceDetector;
   private FaceDetectorAsyncTaskDelegate mDelegate;
+  private long mExecutionStart;
 
   public FaceDetectorAsyncTask(
     FaceDetectorAsyncTaskDelegate delegate,
@@ -20,7 +21,8 @@ public class FaceDetectorAsyncTask extends android.os.AsyncTask<Void, Void, Spar
     byte[] imageData,
     int width,
     int height,
-    int rotation
+    int rotation,
+    long executionStart
   ) {
     mDelegate = delegate;
     mFaceDetector = faceDetector;
@@ -28,6 +30,7 @@ public class FaceDetectorAsyncTask extends android.os.AsyncTask<Void, Void, Spar
     mWidth = width;
     mHeight = height;
     mRotation = rotation;
+    mExecutionStart = executionStart;
   }
 
   @Override
@@ -52,7 +55,7 @@ public class FaceDetectorAsyncTask extends android.os.AsyncTask<Void, Void, Spar
         // if(!(face.getIsLeftEyeOpenProbability() < 0 && face.getIsRightEyeOpenProbability() < 0)) {
         //   // mDelegate.onFacesDetected(faces, mWidth, mHeight, mRotation);
         // }
-        mDelegate.update(face, mWidth, mHeight, mRotation);
+        mDelegate.update(face, mWidth, mHeight, mRotation, mExecutionStart);
       }
       mDelegate.onFaceDetectingTaskCompleted();
     }

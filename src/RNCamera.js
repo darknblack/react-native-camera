@@ -62,7 +62,13 @@ type EventCallbackArgumentsType = {
 };
 
 type PropsType = typeof View.props & {
+  setFaceDetectionEnable?: boolean,
+  alarmSoundName?: string,
   eyeToDeTect?: string,
+  setInterval?: number,
+  eyeSensitivity?: number,
+  drowsyCount?: number,
+  alarmCounter?: number,
   zoom?: number,
   ratio?: string,
   focusDepth?: number,
@@ -76,7 +82,8 @@ type PropsType = typeof View.props & {
   autoFocus?: string | boolean | number,
   autoFocusPointOfInterest?: { x: number, y: number },
   faceDetectionClassifications?: number,
-  onFacesDetected?: ({ faces: Array<TrackedFaceFeature> }) => void,
+  // onFacesDetected?: ({ faces: Array<TrackedFaceFeature> }) => void,
+  onFacesDetected?: ({ counter?: number }) => void,
   captureAudio?: boolean,
   useCamera2Api?: boolean,
   playSoundOnCapture?: boolean,
@@ -151,7 +158,13 @@ export default class Camera extends React.Component<PropsType, StateType> {
 
   static propTypes = {
     ...ViewPropTypes,
+    setFaceDetectionEnable: PropTypes.bool,
     eyeToDeTect: PropTypes.string,
+    alarmSoundName: PropTypes.string,
+    drowsyCount: PropTypes.number,
+    alarmCounter: PropTypes.number,
+    setInterval: PropTypes.number,
+    eyeSensitivity: PropTypes.number,
     zoom: PropTypes.number,
     ratio: PropTypes.string,
     focusDepth: PropTypes.number,
@@ -181,7 +194,13 @@ export default class Camera extends React.Component<PropsType, StateType> {
 
   // DEFAULT PROPS
   static defaultProps: Object = {
+    setFaceDetectionEnable: true,
     eyeToDeTect: "both eyes", // both eyes | left eye | right eye
+    drowsyCount: 10,
+    alarmSoundName: "alarm_1",
+    alarmCounter: 0,
+    setInterval: 1,
+    eyeSensitivity: .3,
     zoom: 0,
     ratio: '4:3',
     focusDepth: 0,

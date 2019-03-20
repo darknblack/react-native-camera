@@ -63,6 +63,48 @@ public class CameraViewManager extends ViewGroupManager<RNCameraView> {
     return builder.build();
   }
 
+  @ReactProp(name = "setInterval")
+  public void setInterval(RNCameraView view, float setInterval) {
+    long interval = (long) (setInterval * 1000);
+    view.setInterval(interval);
+  }
+
+  @ReactProp(name = "eyeSensitivity")
+  public void setEyeSensitivity(RNCameraView view, float eyeSensitivity) {
+    view.setEyeSensitivity(eyeSensitivity);
+  }
+
+  @ReactProp(name = "alarmSoundName")
+  public void setAlarmSoundName(RNCameraView view, String alarmSoundName) {
+    view.setAlarmSoundName(alarmSoundName);
+  }
+
+  @ReactProp(name = "setFaceDetectionEnable")
+  public void setFaceDetectionEnable(RNCameraView view,
+    boolean setFaceDetectionEnable) {
+    view.setFaceDetectionEnable(setFaceDetectionEnable);
+  }
+
+  @ReactProp(name = "drowsyCount")
+  public void setDrowsyCount(RNCameraView view, int drowsyCount) {
+    view.setDrowsyCount(drowsyCount);
+  }
+
+  @ReactProp(name = "alarmCounter")
+  public void setAlarmCounter(RNCameraView view, int alarmCounter) {
+    view.setAlarmCounter(alarmCounter);
+  }
+
+  @ReactProp(name = "faceDetectorEnabled")
+  public void setFaceDetecting(RNCameraView view, boolean faceDetectorEnabled) {
+    view.setShouldDetectFaces(faceDetectorEnabled);
+  }
+
+  @ReactProp(name = "eyeToDeTect")
+  public void setEyeToDetect(RNCameraView view, String eyeToDeTect) {
+    view.setEyeToDetect(eyeToDeTect);
+  }
+
   @ReactProp(name = "type")
   public void setType(RNCameraView view, int type) {
     view.setFacing(type);
@@ -111,16 +153,6 @@ public class CameraViewManager extends ViewGroupManager<RNCameraView> {
   @ReactProp(name = "playSoundOnCapture")
   public void setPlaySoundOnCapture(RNCameraView view, boolean playSoundOnCapture) {
     view.setPlaySoundOnCapture(playSoundOnCapture);
-  }
-
-  @ReactProp(name = "eyeToDeTect")
-  public void setEyeToDetect(RNCameraView view, String eyeToDeTect) {
-    view.setEyeToDetect(eyeToDeTect);
-  }
-
-  @ReactProp(name = "faceDetectorEnabled")
-  public void setFaceDetecting(RNCameraView view, boolean faceDetectorEnabled) {
-    view.setShouldDetectFaces(faceDetectorEnabled);
   }
 
   @ReactProp(name = "faceDetectionMode")

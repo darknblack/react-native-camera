@@ -44,6 +44,9 @@ import android.util.Log;
 import android.media.MediaPlayer;
 import android.media.AudioManager;
 import android.content.res.AssetFileDescriptor;
+import android.content.Context;
+import java.lang.reflect.Method;
+import com.facebook.react.uimanager.events.RCTEventEmitter;
 
 public class RNCameraView extends CameraView implements LifecycleEventListener, FaceDetectorAsyncTaskDelegate, PictureSavedDelegate {
   private ThemedReactContext mThemedReactContext;
@@ -65,24 +68,30 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   private int mFaceDetectionLandmarks = RNFaceDetector.NO_LANDMARKS;
   private int mFaceDetectionClassifications = RNFaceDetector.NO_CLASSIFICATIONS;
 
-
   // ADDED BY ME
-  private volatile Face mFace;
+  private Face mFace;
   private Paint mFacePositionPaint;
   private ImageDimensions dimensions;
   private ExecutorService executorService;
-  private static final float FACE_POSITION_RADIUS = 5f;
+  private static final float FACE_POSITION_RADIUS = 5;
 
-  private boolean mEyesOpen = true;
-  private boolean mShouldCount = true;
+  private int mAudioStartLatency = 0;
   private int mCounter = 0;
+  private int mDrowsyCount = 10;
+  private float scaleX = 1;
+  private float scaleY = 1;
+  private long mInterval = 1000;
+  private final long mInputDelay = 120;
   private float mEyeOpenProbability = .9f;
   private float mUserSetEyesOpenProbability = .3f;
-  float scaleX = 1f;
-  float scaleY = 1f;
-  private String mEyeToDetect = "both eyes";
-  private MediaPlayer mMediaPlayer;
+  private boolean mEyesOpen = true;
+  private boolean mShouldCount = true;
+  private boolean mEyesClosed = false;
+  private boolean mSetFaceDetectionEnable = true;
+  private String mAlarmSoundName;
 
+  private String mEyeToDetect = "both eyes";
+  private MediaPlayer mMediaPlayer; // CREATE MEDIAPLAYER BELOW
 
   public RNCameraView(ThemedReactContext themedReactContext) {
     super(themedReactContext, true);
@@ -92,20 +101,14 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
     mFacePositionPaint = new Paint();
     mFacePositionPaint.setColor(Color.RED);
     executorService = Executors.newFixedThreadPool(1);
-    mMediaPlayer = new MediaPlayer();
 
     try {
-      int res = mThemedReactContext.getResources().getIdentifier("alarm_1", "raw", mThemedReactContext.getPackageName());
-      AssetFileDescriptor afd = mThemedReactContext.getResources().openRawResourceFd(res);
-      mMediaPlayer.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
-
-      mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-      mMediaPlayer.prepareAsync();
-
-    } catch (Exception e) {
-      Log.d("RNSoundModule", "Exception", e);
+      AudioManager am = (AudioManager) themedReactContext.getSystemService(Context.AUDIO_SERVICE);
+      Method m = am.getClass().getMethod("getOutputLatency", int.class);
+      mAudioStartLatency = (Integer) m.invoke(am, AudioManager.STREAM_MUSIC);
+    } catch(Exception e) {
+      mAudioStartLatency = 0;
     }
-
 
     addCallback(new Callback() {
       @Override
@@ -153,8 +156,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
       @Override
       public void onFramePreview(CameraView cameraView, byte[] data, int width, int height, int rotation) {
         int correctRotation = RNCameraViewHelper.getCorrectCameraRotation(rotation, getFacing());
-
-        boolean willCallFaceTask = mShouldDetectFaces && !faceDetectorTaskLock && cameraView instanceof FaceDetectorAsyncTaskDelegate;
+        boolean willCallFaceTask = mShouldDetectFaces && mSetFaceDetectionEnable && !faceDetectorTaskLock && cameraView instanceof FaceDetectorAsyncTaskDelegate;
 
         if (!willCallFaceTask)
           return;
@@ -162,10 +164,11 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
         if (data.length < (1.5 * width * height))
           return;
 
+        long executionStart = System.currentTimeMillis();
         if (willCallFaceTask) {
           faceDetectorTaskLock = true;
           FaceDetectorAsyncTaskDelegate delegate = (FaceDetectorAsyncTaskDelegate) cameraView;
-          new FaceDetectorAsyncTask(delegate, mFaceDetector, data, width, height, correctRotation).execute();
+          new FaceDetectorAsyncTask(delegate, mFaceDetector, data, width, height, correctRotation, executionStart).execute();
         }
       }
 
@@ -173,9 +176,9 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   }
 
   @Override
-  public void update(Face face, int sourceWidth, int sourceHeight, int sourceRotation) {
-    dimensions = new ImageDimensions(sourceWidth, sourceHeight, sourceRotation, getFacing());
+  public void update(Face face, int sourceWidth, int sourceHeight, int sourceRotation, long executionStart) {
     mFace = face;
+    dimensions = new ImageDimensions(sourceWidth, sourceHeight, sourceRotation, getFacing());
 
     scaleX = (float) getWidth() / (dimensions.getWidth());
     scaleY = (float) getHeight() / (dimensions.getHeight());
@@ -190,15 +193,13 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
           ? mFace.getIsLeftEyeOpenProbability()
           : mFace.getIsRightEyeOpenProbability();
 
-    boolean eyesClosed;
-
     if(mEyeOpenProbability != -1.0f)
-      eyesClosed = mEyeOpenProbability <= mUserSetEyesOpenProbability;
+      mEyesClosed = mEyeOpenProbability <= mUserSetEyesOpenProbability;
     else
-      eyesClosed = false;
+      mEyesClosed = false;
 
-    if(eyesClosed)
-      readyForAlarm();
+    if(mEyesClosed)
+      readyForAlarm(executionStart);
     else
       stopAlarm();
 
@@ -206,32 +207,55 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
     postInvalidate();
   }
 
-  public void stopAlarm() {
-    mEyesOpen = true;
+  public void playSound() {
+    if(mMediaPlayer.isPlaying())
+      return;
+    mMediaPlayer.setLooping(true);
+    mMediaPlayer.seekTo(200);
+    mMediaPlayer.start();
+  }
+
+  public void stopSound() {
     if(mMediaPlayer.isPlaying()) {
+      mMediaPlayer.setLooping(false);
       mMediaPlayer.pause();
       mMediaPlayer.seekTo(0);
     }
   }
 
-  public void readyForAlarm() {
+  public void stopAlarm() {
+    mEyesOpen = true;
+    stopSound();
+  }
+
+  public void readyForAlarm(long executionStart) {
+    long executionEnd = System.currentTimeMillis();
+    long asyncExecutionTime = executionEnd - executionStart;
+    final long executionDelay = mInterval - (asyncExecutionTime + mAudioStartLatency + mInputDelay);
+
     executorService.submit(new Runnable() {
       public void run() {
         try {
           if(mEyesOpen == false) {
             if(mShouldCount) {
+              mCounter++;
               mShouldCount = false;
-              if(mMediaPlayer.isPlaying()) {
-                mCounter++;
-              }
+              WritableMap mEvent = Arguments.createMap();
+              mEvent.putInt("counter", mCounter);
+              mThemedReactContext.getJSModule(RCTEventEmitter.class).receiveEvent(getId(), "onFacesDetected", mEvent);
             }
           } else {
             mEyesOpen = false;
             mShouldCount = true;
-            Thread.sleep(500); // WAIT FOR A SECOND
-            mMediaPlayer.setLooping(true);
-            mMediaPlayer.seekTo(200);
-            mMediaPlayer.start();
+            Thread.sleep(executionDelay); // WAIT FOR A SECOND
+            if(mEyesClosed) {
+              if(mCounter > 0 && (mCounter+1) % mDrowsyCount == 0) {
+                stopSound();
+              } else {
+                playSound();
+              }
+            }
+            Thread.sleep(mAudioStartLatency);
           }
         } catch (InterruptedException e) {
           throw new IllegalStateException(e);
@@ -241,11 +265,10 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   }
 
   public float translateX(float x) {
-    if (dimensions.getFacing() == CameraView.FACING_FRONT) {
-      return dimensions.getWidth() - (x * scaleX) ;
-    } else {
+    if (dimensions.getFacing() == CameraView.FACING_FRONT)
+      return dimensions.getWidth() - (x * scaleX);
+    else
       return x * scaleX;
-    }
   }
 
   public float translateY(float y) {
@@ -256,13 +279,17 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   public void draw(Canvas canvas) {
     super.draw(canvas);
 
-    if (mFace == null) return;
+    if (mFace == null)
+      return;
 
     for(Landmark landmark : mFace.getLandmarks()) {
+      int landmarkType = landmark.getType();
+
+      if(!(landmarkType == 4 || landmarkType == 10))
+        continue;
+
       float x = translateX(landmark.getPosition().x);
       float y = translateY(landmark.getPosition().y);
-
-      int landmarkType = landmark.getType();
 
       if(mEyeToDetect.equals("left eye")) {
         if(landmarkType == 4)
@@ -278,11 +305,13 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
       }
     }
 
-    Paint mIdPaint = new Paint();
-    mIdPaint.setColor(Color.RED);
-    mIdPaint.setTextSize(20f);
+    // Paint mIdPaint = new Paint();
+    // mIdPaint.setColor(Color.RED);
+    // mIdPaint.setTextSize(20f);
 
-    canvas.drawText("counter: " + mCounter, 50, 200, mIdPaint);
+    // canvas.drawText("counter: " + mCounter, 50, 200, mIdPaint);
+    // canvas.drawText("mAlarmSoundName: " + mAlarmSoundName, 50, 280, mIdPaint);
+    // canvas.drawText("mAudioStartLatency: " + mAudioStartLatency, 50, 250, mIdPaint);
 
   }
 
@@ -420,6 +449,41 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
     }
   }
 
+  public void setDrowsyCount(int drowsyCount) {
+    this.mDrowsyCount = drowsyCount;
+  }
+
+  public void setAlarmCounter(int alarmCounter) {
+    this.mCounter = alarmCounter;
+  }
+
+  public void setEyeSensitivity(float eyeSensitivity) {
+    this.mUserSetEyesOpenProbability = eyeSensitivity;
+  }
+
+  public void setAlarmSoundName(String alarmSoundName) {
+    mMediaPlayer = new MediaPlayer();
+    try {
+      int res = mThemedReactContext.getResources().getIdentifier(alarmSoundName, "raw", mThemedReactContext.getPackageName());
+      AssetFileDescriptor afd = mThemedReactContext.getResources().openRawResourceFd(res);
+      mMediaPlayer.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+      mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+      mMediaPlayer.prepareAsync();
+    } catch (Exception e) {
+      Log.d("RNSoundModule", "Exception", e);
+    }
+  }
+
+  public void setFaceDetectionEnable(boolean setFaceDetectionEnable) {
+    this.mSetFaceDetectionEnable = setFaceDetectionEnable;
+    if(!setFaceDetectionEnable)
+      stopAlarm();
+  }
+
+  public void setInterval(long interval) {
+    this.mInterval = interval;
+  }
+
   public void setEyeToDetect(String eyeToDetect) {
     this.mEyeToDetect = eyeToDetect; // both eyes | left eye | right eye
   }
@@ -474,6 +538,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
 
   @Override
   public void onHostPause() {
+    stopAlarm();
     if (!mIsPaused && isCameraOpened()) {
       mIsPaused = true;
       stop();
@@ -482,6 +547,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
 
   @Override
   public void onHostDestroy() {
+    stopAlarm();
     if (mFaceDetector != null) {
       mFaceDetector.release();
     }
