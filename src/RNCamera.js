@@ -64,11 +64,12 @@ type EventCallbackArgumentsType = {
 type PropsType = typeof View.props & {
   setFaceDetectionEnable?: boolean,
   alarmSoundName?: string,
-  eyeToDeTect?: string,
+  eyeToDetect?: string,
   setInterval?: number,
   eyeSensitivity?: number,
   drowsyCount?: number,
   alarmCounter?: number,
+  alarmVolume?: number,
   zoom?: number,
   ratio?: string,
   focusDepth?: number,
@@ -159,10 +160,11 @@ export default class Camera extends React.Component<PropsType, StateType> {
   static propTypes = {
     ...ViewPropTypes,
     setFaceDetectionEnable: PropTypes.bool,
-    eyeToDeTect: PropTypes.string,
+    eyeToDetect: PropTypes.string,
     alarmSoundName: PropTypes.string,
     drowsyCount: PropTypes.number,
     alarmCounter: PropTypes.number,
+    alarmVolume: PropTypes.number,
     setInterval: PropTypes.number,
     eyeSensitivity: PropTypes.number,
     zoom: PropTypes.number,
@@ -195,10 +197,11 @@ export default class Camera extends React.Component<PropsType, StateType> {
   // DEFAULT PROPS
   static defaultProps: Object = {
     setFaceDetectionEnable: true,
-    eyeToDeTect: "both eyes", // both eyes | left eye | right eye
+    eyeToDetect: "both eyes", // both eyes | left eye | right eye
     drowsyCount: 10,
     alarmSoundName: "alarm_1",
     alarmCounter: 0,
+    alarmVolume: 100,
     setInterval: 1,
     eyeSensitivity: .3,
     zoom: 0,

@@ -90,6 +90,11 @@ public class CameraViewManager extends ViewGroupManager<RNCameraView> {
     view.setDrowsyCount(drowsyCount);
   }
 
+  @ReactProp(name = "alarmVolume")
+  public void setAlarmVolume(RNCameraView view, float alarmVolume) {
+    view.setAlarmVolume(alarmVolume / 100);
+  }
+
   @ReactProp(name = "alarmCounter")
   public void setAlarmCounter(RNCameraView view, int alarmCounter) {
     view.setAlarmCounter(alarmCounter);
@@ -100,9 +105,9 @@ public class CameraViewManager extends ViewGroupManager<RNCameraView> {
     view.setShouldDetectFaces(faceDetectorEnabled);
   }
 
-  @ReactProp(name = "eyeToDeTect")
-  public void setEyeToDetect(RNCameraView view, String eyeToDeTect) {
-    view.setEyeToDetect(eyeToDeTect);
+  @ReactProp(name = "eyeToDetect")
+  public void setEyeToDetect(RNCameraView view, String eyeToDetect) {
+    view.setEyeToDetect(eyeToDetect);
   }
 
   @ReactProp(name = "type")

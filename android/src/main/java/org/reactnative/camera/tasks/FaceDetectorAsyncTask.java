@@ -52,9 +52,6 @@ public class FaceDetectorAsyncTask extends android.os.AsyncTask<Void, Void, Spar
     } else {
       if (faces.size() > 0) {
         Face face = faces.valueAt(0);
-        // if(!(face.getIsLeftEyeOpenProbability() < 0 && face.getIsRightEyeOpenProbability() < 0)) {
-        //   // mDelegate.onFacesDetected(faces, mWidth, mHeight, mRotation);
-        // }
         mDelegate.update(face, mWidth, mHeight, mRotation, mExecutionStart);
       }
       mDelegate.onFaceDetectingTaskCompleted();
