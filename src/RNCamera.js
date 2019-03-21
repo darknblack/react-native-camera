@@ -67,7 +67,6 @@ type PropsType = typeof View.props & {
   eyeToDetect?: string,
   setInterval?: number,
   eyeSensitivity?: number,
-  drowsyCount?: number,
   alarmCounter?: number,
   alarmVolume?: number,
   zoom?: number,
@@ -162,7 +161,6 @@ export default class Camera extends React.Component<PropsType, StateType> {
     setFaceDetectionEnable: PropTypes.bool,
     eyeToDetect: PropTypes.string,
     alarmSoundName: PropTypes.string,
-    drowsyCount: PropTypes.number,
     alarmCounter: PropTypes.number,
     alarmVolume: PropTypes.number,
     setInterval: PropTypes.number,
@@ -198,7 +196,6 @@ export default class Camera extends React.Component<PropsType, StateType> {
   static defaultProps: Object = {
     setFaceDetectionEnable: true,
     eyeToDetect: "both eyes", // both eyes | left eye | right eye
-    drowsyCount: 10,
     alarmSoundName: "alarm_1",
     alarmCounter: 0,
     alarmVolume: 100,

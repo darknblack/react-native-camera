@@ -38,6 +38,7 @@ public class CameraViewManager extends ViewGroupManager<RNCameraView> {
 
   @Override
   public void onDropViewInstance(RNCameraView view) {
+    view.destroyInstance();
     view.stop();
     super.onDropViewInstance(view);
   }
@@ -83,11 +84,6 @@ public class CameraViewManager extends ViewGroupManager<RNCameraView> {
   public void setFaceDetectionEnable(RNCameraView view,
     boolean setFaceDetectionEnable) {
     view.setFaceDetectionEnable(setFaceDetectionEnable);
-  }
-
-  @ReactProp(name = "drowsyCount")
-  public void setDrowsyCount(RNCameraView view, int drowsyCount) {
-    view.setDrowsyCount(drowsyCount);
   }
 
   @ReactProp(name = "alarmVolume")

@@ -72,6 +72,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   // ADDED BY ME
   private Face mFace;
   private Paint mFacePositionPaint;
+  private Paint mSensitivityPaint;
   private Paint mBoxPaint;
   private ImageDimensions dimensions;
   private ExecutorService mExecutorService = Executors.newFixedThreadPool(1);
@@ -79,7 +80,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
 
   private int mAudioStartLatency = 0;
   private int mCounter = 0;
-  private int mDrowsyCount = 10;
+  private boolean isOnSettingsPage = false;
   private float scaleX = 1;
   private float scaleY = 1;
   private final long mInputDelay = 120;
@@ -109,6 +110,10 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
     mBoxPaint.setColor(Color.RED);
     mBoxPaint.setStrokeWidth(4f * scaleY);
     mBoxPaint.setStyle(Paint.Style.STROKE);
+
+    mSensitivityPaint = new Paint();
+    mFacePositionPaint.setColor(Color.WHITE);
+    mFacePositionPaint.setTextSize(40f * scaleY);
 
     try {
       AudioManager am = (AudioManager) themedReactContext.getSystemService(Context.AUDIO_SERVICE);
@@ -179,15 +184,16 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
           new FaceDetectorAsyncTask(delegate, mFaceDetector, data, width, height, correctRotation, executionStart).execute();
         }
       }
-
     });
   }
 
   @Override
   public void update(Face face, int sourceWidth, int sourceHeight, int sourceRotation, long executionStart) {
+    if(mMediaPlayer == null)
+      return;
+
     invalidate();
     mFace = face;
-    // invalidate();
     dimensions = new ImageDimensions(sourceWidth, sourceHeight, sourceRotation, getFacing());
 
     scaleX = getWidth() / (dimensions.getWidth());
@@ -210,9 +216,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
       mEyesClosed = mEyeOpenProbability <= mUserSetEyesOpenProbability;
     }
 
-
-    // REDRAW EYE DOTS
-    // postInvalidate();
+    Log.d("FF", "mUserSetEyesOpenProbability: " + mUserSetEyesOpenProbability);
 
     if(mEyesClosed)
       readyForAlarm(executionStart);
@@ -230,11 +234,19 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   }
 
   public void stopSound() {
-    if(!mMediaPlayer.isPlaying())
-      return;
-    mMediaPlayer.setLooping(false);
-    mMediaPlayer.pause();
-    mMediaPlayer.seekTo(0);
+    try {
+      if(mMediaPlayer != null) {
+        if(!mMediaPlayer.isPlaying())
+          return;
+        mMediaPlayer.setLooping(false);
+        mMediaPlayer.pause();
+        mMediaPlayer.seekTo(0);
+      }
+    } catch (Exception e) {
+      mEyesOpen = true;
+      mShouldCount = false;
+      Log.d("stop sound", "Exception at stopsound: " + e);
+    }
   }
 
   public void stopAlarm() {
@@ -242,13 +254,12 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
     stopSound();
   }
 
-  public void readyForAlarm(long executionStart) {
-    long executionEnd = System.currentTimeMillis();
-    long asyncExecutionTime = executionEnd - executionStart;
-    final long executionDelay = mInterval - (asyncExecutionTime + mAudioStartLatency + mInputDelay);
-
+  public void readyForAlarm(final long executionStart) {
     mExecutorService.execute(new Runnable() {
       public void run() {
+      long executionEnd = System.currentTimeMillis();
+      long asyncExecutionTime = executionEnd - executionStart;
+      final long executionDelay = mInterval - (asyncExecutionTime + mAudioStartLatency + mInputDelay);
         try {
           if(mEyesOpen == false) {
             if(mShouldCount) {
@@ -262,13 +273,8 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
             mEyesOpen = false;
             mShouldCount = true;
             Thread.sleep(executionDelay); // WAIT FOR A SECOND
-            if(mEyesClosed) {
-              if(mCounter > 0 && (mCounter+1) % mDrowsyCount == 0) {
-                stopSound();
-              } else {
-                playSound();
-              }
-            }
+            if(mEyesClosed)
+              playSound();
             Thread.sleep(mAudioStartLatency);
           }
         } catch (InterruptedException e) {
@@ -306,16 +312,28 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
       float y = translateY(landmark.getPosition().y) - FACE_POSITION_RADIUS;
 
       if(mEyeToDetect.equals("left eye")) {
-        if(landmarkType == 4)
+        if(landmarkType == 4) {
           canvas.drawCircle(x, y, (FACE_POSITION_RADIUS * scaleY), mFacePositionPaint);
+          if(isOnSettingsPage) {
+            canvas.drawText("" + String.format("%.2f", mEyeOpenProbability), x, y + 50, mFacePositionPaint);
+          }
+        }
       }
       else if(mEyeToDetect.equals("right eye")) {
-        if(landmarkType == 10)
+        if(landmarkType == 10) {
           canvas.drawCircle(x, y, (FACE_POSITION_RADIUS * scaleY), mFacePositionPaint);
+          if(isOnSettingsPage) {
+             canvas.drawText("" + String.format("%.2f", mEyeOpenProbability), x, y + 50, mFacePositionPaint);
+          }
+        }
       }
       else {
-        if(landmarkType == 4 || landmarkType == 10)
+        if(landmarkType == 4 || landmarkType == 10) {
           canvas.drawCircle(x, y, (FACE_POSITION_RADIUS * scaleY), mFacePositionPaint);
+          if(isOnSettingsPage) {
+             canvas.drawText("" + String.format("%.2f", mEyeOpenProbability), x, y + 50, mFacePositionPaint);
+          }
+        }
       }
     }
 
@@ -470,10 +488,6 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
     }
   }
 
-  public void setDrowsyCount(int drowsyCount) {
-    this.mDrowsyCount = drowsyCount;
-  }
-
   public void setAlarmVolume(float alarmVolume) {
     AudioManager audioManager = (AudioManager) mThemedReactContext.getSystemService(Context.AUDIO_SERVICE);
     int volume = Math.round(audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC) * alarmVolume);
@@ -482,6 +496,8 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
 
   public void setAlarmCounter(int alarmCounter) {
     this.mCounter = alarmCounter;
+    if(alarmCounter == -999)
+      isOnSettingsPage = true;
   }
 
   public void setEyeSensitivity(float eyeSensitivity) {
@@ -500,6 +516,12 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
     } catch (Exception e) {
       Log.d("RNSoundModule", "Exception", e);
     }
+  }
+
+  public void destroyInstance() {
+    mMediaPlayer.reset();
+    mMediaPlayer.release();
+    mMediaPlayer = null;
   }
 
   public void setFaceDetectionEnable(boolean setFaceDetectionEnable) {
@@ -525,9 +547,8 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   }
 
   public void onFacesDetected(SparseArray<Face> facesReported, int sourceWidth, int sourceHeight, int sourceRotation) {
-    if (!mShouldDetectFaces) {
+    if (!mShouldDetectFaces)
       return;
-    }
 
     SparseArray<Face> facesDetected = facesReported == null ? new SparseArray<Face>() : facesReported;
 
@@ -536,9 +557,8 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   }
 
   public void onFaceDetectionError(RNFaceDetector faceDetector) {
-    if (!mShouldDetectFaces) {
+    if (!mShouldDetectFaces)
       return;
-    }
 
     RNCameraViewHelper.emitFaceDetectionErrorEvent(this, faceDetector);
   }
@@ -575,7 +595,10 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
 
   @Override
   public void onHostDestroy() {
-    stopAlarm();
+    if(mMediaPlayer != null){
+      mMediaPlayer.reset();
+      mMediaPlayer.release();
+    }
     if (mFaceDetector != null) {
       mFaceDetector.release();
     }
