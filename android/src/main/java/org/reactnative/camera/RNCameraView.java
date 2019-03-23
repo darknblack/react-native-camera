@@ -244,7 +244,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
 
   public void stopSound() {
     if(mMediaPlayer == null)
-      returnn;
+      return;
 
     try {
       if(mMediaPlayer != null) {
