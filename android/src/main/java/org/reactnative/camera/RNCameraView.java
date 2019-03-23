@@ -225,6 +225,9 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   }
 
   public void playSound() {
+    if(mMediaPlayer == null)
+      return;
+
     if(!mSetFaceDetectionEnable) {
       if(mMediaPlayer.isPlaying())
         stopAlarm();
@@ -240,6 +243,9 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   }
 
   public void stopSound() {
+    if(mMediaPlayer == null)
+      returnn;
+
     try {
       if(mMediaPlayer != null) {
         if(!mMediaPlayer.isPlaying())
