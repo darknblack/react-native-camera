@@ -76,14 +76,14 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   private Paint mBoxPaint;
   private ImageDimensions dimensions;
   private ExecutorService mExecutorService = Executors.newFixedThreadPool(1);
-  private static final float FACE_POSITION_RADIUS = 5;
+  private static float FACE_POSITION_RADIUS = 3;
 
   private int mAudioStartLatency = 0;
   private int mCounter = 0;
   private boolean isOnSettingsPage = false;
-  private float scaleX = 1;
-  private float scaleY = 1;
-  private final long mInputDelay = 50;
+  private double scaleX = 1;
+  private double scaleY = 1;
+  private final long mInputDelay = 80;
   private float mEyeOpenProbability = .9f;
   private float mUserSetEyesOpenProbability = .3f;
   private long mInterval = 1000;
@@ -108,12 +108,14 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
 
     mBoxPaint = new Paint();
     mBoxPaint.setColor(Color.RED);
-    mBoxPaint.setStrokeWidth(4f * scaleY);
+    mBoxPaint.setStrokeWidth((float) scaleY * 4f);
     mBoxPaint.setStyle(Paint.Style.STROKE);
 
     mSensitivityPaint = new Paint();
     mSensitivityPaint.setColor(Color.WHITE);
-    mSensitivityPaint.setTextSize(40f * scaleY);
+    mSensitivityPaint.setTextSize((float) scaleY * 40f);
+
+    FACE_POSITION_RADIUS = FACE_POSITION_RADIUS * getResources().getDisplayMetrics().density;
 
     try {
       AudioManager am = (AudioManager) themedReactContext.getSystemService(Context.AUDIO_SERVICE);
@@ -189,15 +191,14 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
 
   @Override
   public void update(Face face, int sourceWidth, int sourceHeight, int sourceRotation, long executionStart) {
-    if(mMediaPlayer == null)
-      return;
-
-    postInvalidate();
     mFace = face;
     dimensions = new ImageDimensions(sourceWidth, sourceHeight, sourceRotation, getFacing());
+    scaleX = (double) getWidth() / (dimensions.getWidth());
+    scaleY = (double) getHeight() / (dimensions.getHeight());
+    postInvalidate();
 
-    scaleX = getWidth() / (dimensions.getWidth());
-    scaleY = getHeight() / (dimensions.getHeight());
+    if(mMediaPlayer == null)
+      return;
 
     if(mEyeToDetect.equals("left eye"))
       mEyeOpenProbability = mFace.getIsLeftEyeOpenProbability();
@@ -215,8 +216,6 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
       eyeIsDetected = true;
       mEyesClosed = mEyeOpenProbability <= mUserSetEyesOpenProbability;
     }
-
-    Log.d("FF", "mUserSetEyesOpenProbability: " + mUserSetEyesOpenProbability);
 
     if(mEyesClosed)
       readyForAlarm(executionStart);
@@ -247,13 +246,11 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
       return;
 
     try {
-      if(mMediaPlayer != null) {
-        if(!mMediaPlayer.isPlaying())
-          return;
-        mMediaPlayer.setLooping(false);
-        mMediaPlayer.pause();
-        mMediaPlayer.seekTo(0);
-      }
+      if(!mMediaPlayer.isPlaying())
+        return;
+      mMediaPlayer.setLooping(false);
+      mMediaPlayer.pause();
+      mMediaPlayer.seekTo(0);
     } catch (Exception e) {
       mEyesOpen = true;
       mShouldCount = false;
@@ -267,11 +264,12 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   }
 
   public void readyForAlarm(final long executionStart) {
+    long executionEnd = System.currentTimeMillis();
+    long asyncExecutionTime = executionEnd - executionStart;
+    final long executionDelay = mInterval - (asyncExecutionTime + mAudioStartLatency + mInputDelay);
+
     mExecutorService.execute(new Runnable() {
       public void run() {
-      long executionEnd = System.currentTimeMillis();
-      long asyncExecutionTime = executionEnd - executionStart;
-      final long executionDelay = mInterval - (asyncExecutionTime + mAudioStartLatency + mInputDelay);
         try {
           if(mEyesOpen == false) {
             if(mShouldCount) {
@@ -301,15 +299,18 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
     });
   }
 
-  public float translateX(float x) {
-    if (dimensions.getFacing() == CameraView.FACING_FRONT)
-      return dimensions.getWidth() - (x * scaleX);
-    else
-      return x * scaleX;
+  public double doScaleX(double x) {
+    return x * scaleX;
   }
 
-  public float translateY(float y) {
+  public double doScaleY(double y) {
     return y * scaleY;
+  }
+
+  public double valueMirroredHorizontally(double elementX, int containerWidth, double scaleX) {
+    double originalX = elementX / scaleX;
+    double mirroredX = containerWidth - originalX;
+    return mirroredX * scaleX;
   }
 
   @Override
@@ -328,49 +329,66 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
       if(!(landmarkType == 4 || landmarkType == 10))
         continue;
 
-      float x = translateX(landmark.getPosition().x) - FACE_POSITION_RADIUS;
-      float y = translateY(landmark.getPosition().y) - FACE_POSITION_RADIUS;
+      double x = doScaleX(landmark.getPosition().x);
+      double y = doScaleY(landmark.getPosition().y);
+
+      if(dimensions.getFacing() == CameraView.FACING_FRONT)
+        x = valueMirroredHorizontally(x, dimensions.getWidth(), scaleX);
+
+      float floatX = (float) x - (FACE_POSITION_RADIUS/2);
+      float floatY = (float) y - (FACE_POSITION_RADIUS/2);
 
       if(mEyeToDetect.equals("left eye")) {
         if(landmarkType == 4) {
-          canvas.drawCircle(x, y, (FACE_POSITION_RADIUS * scaleY), mFacePositionPaint);
-          if(isOnSettingsPage) {
-            canvas.drawText("" + String.format("%.2f", mEyeOpenProbability), x, y + 50, mSensitivityPaint);
-          }
+          canvas.drawCircle(floatX, floatY, FACE_POSITION_RADIUS, mFacePositionPaint);
+          if(isOnSettingsPage)
+            canvas.drawText("" + String.format("%.2f", mEyeOpenProbability * 1f), floatX - 20f, (floatY + 50.0f), mSensitivityPaint);
         }
       }
       else if(mEyeToDetect.equals("right eye")) {
         if(landmarkType == 10) {
-          canvas.drawCircle(x, y, (FACE_POSITION_RADIUS * scaleY), mFacePositionPaint);
-          if(isOnSettingsPage) {
-             canvas.drawText("" + String.format("%.2f", mEyeOpenProbability), x, y + 50, mSensitivityPaint);
-          }
+          canvas.drawCircle(floatX, floatY, FACE_POSITION_RADIUS, mFacePositionPaint);
+          if(isOnSettingsPage)
+            canvas.drawText("" + String.format("%.2f", mEyeOpenProbability * 1f), floatX - 20f, (floatY + 50.0f), mSensitivityPaint);
         }
       }
       else {
         if(landmarkType == 4 || landmarkType == 10) {
-          canvas.drawCircle(x, y, (FACE_POSITION_RADIUS * scaleY), mFacePositionPaint);
-          if(isOnSettingsPage) {
-             canvas.drawText("" + String.format("%.2f", mEyeOpenProbability), x, y + 50, mSensitivityPaint);
-          }
+          canvas.drawCircle(floatX, floatY, FACE_POSITION_RADIUS, mFacePositionPaint);
+          if(isOnSettingsPage)
+            canvas.drawText("" + String.format("%.2f", mEyeOpenProbability * 1f), floatX - 20f, (floatY + 50.0f), mSensitivityPaint);
         }
       }
     }
 
-    // if(true) {
     if(eyeIsDetected) {
-      float centerX = mFace.getPosition().x;
-      float centerY = mFace.getPosition().y;
-      float xOffset = mFace.getWidth() / 2.0f;
-      float yOffset = mFace.getHeight() / 2.0f;
-      float x = translateX(centerX + xOffset);
-      float y = translateY(centerY + yOffset);
-      float left = x - xOffset;
-      float right = x + xOffset;
-      float top = y - yOffset;
-      float bottom = y + yOffset;
-      canvas.rotate(mFace.getEulerZ(), left + xOffset/2, top + yOffset/2);
-      canvas.drawRect(left, top, right, bottom, mBoxPaint);
+      double fWidth = doScaleX(mFace.getWidth());
+      double fHeight = doScaleX(mFace.getHeight());
+      double centerX = doScaleX(mFace.getPosition().x);
+      double centerY = doScaleX(mFace.getPosition().y);
+      double xOffset = fWidth/2;
+      double yOffset = fHeight/2;
+      float angle = mFace.getEulerZ();
+
+      if(dimensions.getFacing() == CameraView.FACING_FRONT) {
+        centerX = valueMirroredHorizontally(centerX, dimensions.getWidth(), scaleX);
+        centerX = centerX + (-fWidth);
+      } else
+        angle = (-angle + 360) % 360;
+
+      centerX = centerX + xOffset;
+      centerY = centerY + yOffset;
+
+      double left = centerX - xOffset;
+      double right = centerX + xOffset;
+      double top = centerY - yOffset;
+      double bottom = centerY + yOffset;
+
+      double translateX = left + xOffset/2;
+      double translateY = top + yOffset/2;
+
+      canvas.rotate(angle, (float) translateX, (float) translateY);
+      canvas.drawRect((float) left, (float) top, (float) right, (float) bottom, mBoxPaint);
     }
   }
 
@@ -546,10 +564,9 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
 
   public void setFaceDetectionEnable(boolean setFaceDetectionEnable) {
     this.mSetFaceDetectionEnable = setFaceDetectionEnable;
-    if(!setFaceDetectionEnable) {
-      postInvalidate();
+    if(!setFaceDetectionEnable)
       stopAlarm();
-    }
+    postInvalidate();
   }
 
   public void setInterval(long interval) {
@@ -598,9 +615,9 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
       if ((mIsPaused && !isCameraOpened()) || mIsNew) {
         mIsPaused = false;
         mIsNew = false;
-        postInvalidate();
         start();
       }
+      postInvalidate();
     } else {
       RNCameraViewHelper.emitMountErrorEvent(this, "Camera permissions not granted - component could not be rendered.");
     }
