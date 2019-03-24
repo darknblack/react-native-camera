@@ -76,7 +76,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   private Paint mBoxPaint;
   private ImageDimensions dimensions;
   private ExecutorService mExecutorService = Executors.newFixedThreadPool(1);
-  private static float FACE_POSITION_RADIUS = 3;
+  private static float FACE_POSITION_RADIUS;
 
   private int mAudioStartLatency = 0;
   private int mCounter = 0;
@@ -115,7 +115,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
     mSensitivityPaint.setColor(Color.WHITE);
     mSensitivityPaint.setTextSize((float) scaleY * 40f);
 
-    FACE_POSITION_RADIUS = FACE_POSITION_RADIUS * getResources().getDisplayMetrics().density;
+    FACE_POSITION_RADIUS = 3f * (float) scaleY;
 
     try {
       AudioManager am = (AudioManager) themedReactContext.getSystemService(Context.AUDIO_SERVICE);
