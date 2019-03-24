@@ -115,7 +115,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
     mSensitivityPaint.setColor(Color.WHITE);
     mSensitivityPaint.setTextSize((float) scaleY * 40f);
 
-    FACE_POSITION_RADIUS = 3f * (float) scaleY;
+    FACE_POSITION_RADIUS = 5f * (float) scaleY;
 
     try {
       AudioManager am = (AudioManager) themedReactContext.getSystemService(Context.AUDIO_SERVICE);
