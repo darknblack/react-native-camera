@@ -363,9 +363,9 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
 
     if(eyeIsDetected) {
       double fWidth = doScaleX(mFace.getWidth());
-      double fHeight = doScaleX(mFace.getHeight());
+      double fHeight = doScaleY(mFace.getHeight());
       double centerX = doScaleX(mFace.getPosition().x);
-      double centerY = doScaleX(mFace.getPosition().y);
+      double centerY = doScaleY(mFace.getPosition().y);
       double xOffset = fWidth/2;
       double yOffset = fHeight/2;
       float angle = mFace.getEulerZ();
