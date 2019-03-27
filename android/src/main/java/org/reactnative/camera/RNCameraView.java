@@ -179,7 +179,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
         if (data.length < (1.5 * width * height))
           return;
 
-        long executionStart = System.currentTimeMillis();
+        long executionStart = System.nanoTime();
         if (willCallFaceTask) {
           faceDetectorTaskLock = true;
           FaceDetectorAsyncTaskDelegate delegate = (FaceDetectorAsyncTaskDelegate) cameraView;
@@ -264,9 +264,10 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   }
 
   public void readyForAlarm(final long executionStart) {
-    long executionEnd = System.currentTimeMillis();
+    long executionEnd = System.nanoTime();
     long asyncExecutionTime = executionEnd - executionStart;
-    final long executionDelay = mInterval - (asyncExecutionTime + mAudioStartLatency + mInputDelay);
+    long temp = mInterval - (asyncExecutionTime + mAudioStartLatency + mInputDelay);
+    final long executionDelay = temp > 0 ? temp : 0;
 
     mExecutorService.execute(new Runnable() {
       public void run() {
