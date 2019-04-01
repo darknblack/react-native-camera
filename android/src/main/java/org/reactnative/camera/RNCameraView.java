@@ -265,7 +265,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
 
   public void readyForAlarm(final long executionStart) {
     long executionEnd = System.nanoTime();
-    long asyncExecutionTime = executionEnd - executionStart;
+    long asyncExecutionTime = (executionEnd - executionStart) / 1000000;
     long temp = mInterval - (asyncExecutionTime + mAudioStartLatency + mInputDelay);
     final long executionDelay = temp > 0 ? temp : 0;
 
